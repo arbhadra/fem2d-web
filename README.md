@@ -1,12 +1,20 @@
-# FEM-2D: stress and strain in a loaded bar, in your browser
+# FEM-2D: A Verified Plane-Stress Finite Element Solver for Clamped Bars Under Pressure
 
 [![tests](https://github.com/arbhadra/fem2d-web/actions/workflows/tests.yml/badge.svg)](https://github.com/arbhadra/fem2d-web/actions/workflows/tests.yml)
 
 **Live demo:** https://arbhadra.github.io/fem2d-web/
 
-A 2D plane-stress finite element solver written from scratch in Python (NumPy only, no FE library),
-running in the browser through PyScript. Choose a material, apply pressure to a clamped bar, and get
-stress, strain, deflection and a safety factor, all checked against beam theory.
+## Abstract
+
+This project implements the displacement-based finite element method for 2D linear elasticity under plane
+stress. It uses constant-strain triangles (CST) and bilinear isoparametric quadrilaterals (Q4) with Gauss
+quadrature, written from first principles in Python (NumPy only). A clamped bar under transverse or axial
+pressure is analysed for six engineering and additively manufactured materials, or for user-defined properties.
+The solver reports displacement, strain, stress and a yield-based safety factor. Verification comprises
+rigid-body-mode checks, the patch test, global equilibrium and comparison with Timoshenko beam theory. Q4
+converges to within 0.9% of the analytical tip deflection, while CST shows the expected shear locking. Peak stress
+at the clamped corner does not converge, consistent with a stress singularity. The solver runs in the browser via
+PyScript/WebAssembly.
 
 ![von Mises stress](assets/von_mises.png)
 
@@ -36,11 +44,12 @@ with the first-yield pressure; top-surface stress vs beam theory; and a results 
 | `fem/plotting.py` | All figures |
 | `main.py`, `index.html` | The website |
 
-## Verification (`tests/test_fem.py`, 13 tests, run on every push)
+## Verification (14 automated tests, run on every push)
 
 D matrix vs textbook · 3 rigid-body modes per element (5 with 1-point Q4: hourglass) · patch test on a
 distorted mesh · reactions = applied force · tension ε = p/E · bending converges to beam theory
-(−0.87% at 80 × 8 Q4) · linear scaling with pressure.
+(−0.87% at 80 × 8 Q4) · linear scaling with pressure · `tests/test_web.py` runs the website code
+against a simulated page, so start-up and button errors are caught before deployment.
 
 | Mesh convergence | Top-surface stress |
 | --- | --- |
@@ -66,6 +75,13 @@ depend on print settings.
 - J. Fish and T. Belytschko, *A First Course in Finite Elements*, Wiley.
 - D. L. Logan, *A First Course in the Finite Element Method*, Cengage.
 - R. D. Cook et al., *Concepts and Applications of Finite Element Analysis*, Wiley.
+
+## How to cite
+
+```
+arbhadra (2026). FEM-2D: A verified plane-stress finite element solver for clamped bars under pressure.
+https://github.com/arbhadra/fem2d-web
+```
 
 ## Author
 

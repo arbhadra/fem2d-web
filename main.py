@@ -77,8 +77,7 @@ def results_table(r):
         f"<tr><th>{a}</th><td>{b}</td></tr>" for a, b in rows) + "</table>"
 
 
-@when("change", "#preset")
-def on_preset(event=None):
+def apply_preset():
     key = el("preset").value
     custom = key == "custom"
     for f in ("E", "nu", "sy"):
@@ -90,14 +89,12 @@ def on_preset(event=None):
         el("sy").value = f"{m['yield']/1e6:.4g}"
 
 
-@when("change", "#field")
-def on_field(event=None):
+def draw_field():
     if last:
         show_figure(plot_field(last["r"], el("field").value), "img-field")
 
 
-@when("click", "#solve-btn")
-async def on_solve(event=None):
+async def solve():
     set_status("Solving…", "busy")
     el("solve-btn").disabled = True
     await asyncio.sleep(0.05)                 # let the browser repaint first
@@ -105,7 +102,7 @@ async def on_solve(event=None):
         r = run_case(**read_inputs())
         last["r"] = r
         results_table(r)
-        on_field()
+        draw_field()
         show_figure(plot_load_sweep(load_sweep(r), r["yield"]), "img-sweep")
         if r["inputs"]["load"] == "bending":
             show_figure(plot_top_stress(r), "img-top")
@@ -117,6 +114,26 @@ async def on_solve(event=None):
     el("solve-btn").disabled = False
 
 
-on_preset()
+# ----------------------------------------------------------------- events
+# PyScript's @when passes the browser event to the handler, so handlers take
+# `event` and call the plain functions above (which start-up code can also call).
+@when("change", "#preset")
+def on_preset(event):
+    apply_preset()
+
+
+@when("change", "#field")
+def on_field(event):
+    draw_field()
+
+
+@when("click", "#solve-btn")
+async def on_solve(event):
+    await solve()
+
+
+# ----------------------------------------------------------------- start-up
+apply_preset()
 el("loading").style.display = "none"
-asyncio.ensure_future(on_solve())
+el("solve-btn").disabled = False
+asyncio.ensure_future(solve())

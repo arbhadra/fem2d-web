@@ -14,21 +14,29 @@
 <div id="loading">Loading Python, NumPy and Matplotlib in your browser&hellip; (first visit takes 10&ndash;20 s)</div>
 
 <header>
-  <h1>FEM-2D</h1>
-  <p class="lead">A 2D plane-stress finite element solver written from scratch in Python. Pick a material,
-    apply pressure to a bar, and see its stress, strain and safety factor. Everything runs in your browser: no
-    server, no installation.</p>
-  <p class="links">
-    <a href="https://github.com/arbhadra/fem2d-web">Source code on GitHub</a> &middot;
-    <a href="#theory">Theory</a> &middot;
-    <a href="#verification">Verification</a>
-  </p>
+  <p class="kicker">Computational mechanics &middot; open-source teaching code</p>
+  <h1>FEM-2D: A Verified Plane-Stress Finite Element Solver for Clamped Bars Under Pressure</h1>
+  <p class="byline">arbhadra &middot; B.Sc. Mechanical Engineering &middot; 2026 &middot;
+    <a href="https://github.com/arbhadra/fem2d-web">Source code</a> &middot;
+    <a href="#method">Method</a> &middot; <a href="#verification">Verification</a> &middot; <a href="#references">References</a></p>
+  <div class="abstract">
+    <h2>Abstract</h2>
+    <p>This work implements the displacement-based finite element method for two-dimensional linear elasticity
+      under plane stress. It uses constant-strain triangles (CST) and bilinear isoparametric quadrilaterals (Q4)
+      with Gauss quadrature, written from first principles in Python. The solver is applied to a clamped bar under
+      transverse or axial pressure for six engineering and additively manufactured materials. It reports
+      displacement, strain, stress and a yield-based safety factor. Verification comprises rigid-body-mode checks,
+      the patch test, global equilibrium and comparison with Timoshenko beam theory. The Q4 solution converges to
+      within 0.9% of the analytical tip deflection, and CST exhibits the expected shear locking. The peak stress at
+      the clamped corner does not converge under refinement, consistent with a stress singularity. The code runs
+      entirely in the browser via WebAssembly.</p>
+  </div>
 </header>
 
 <main>
 
 <section id="problem">
-  <h2>1. The problem</h2>
+  <h2>1. Problem formulation</h2>
   <p>A rectangular bar of length <i>L</i>, height <i>h</i> and thickness <i>t</i> is clamped on its left edge.
     A uniform pressure <i>p</i> either pushes down on its top face (bending) or pulls on its right end (tension).
     Assuming small strains, linear elasticity and plane stress, the finite element method finds the stress and strain
@@ -54,7 +62,8 @@
 </section>
 
 <section id="solver">
-  <h2>2. Run it</h2>
+  <h2>2. Interactive solver</h2>
+  <p class="hint">First visit: Python, NumPy and Matplotlib load into your browser (about 15&ndash;30 s). After that each solve takes about a second.</p>
   <div class="grid">
     <fieldset>
       <legend>Geometry and load</legend>
@@ -113,17 +122,17 @@
   </div>
 </section>
 
-<section id="theory">
-  <h2>3. Theory in one page</h2>
+<section id="method">
+  <h2>3. Method</h2>
   <p><b>Weak form.</b> Equilibrium &nabla;&middot;&sigma; = 0 is multiplied by a virtual displacement and integrated
-    by parts. This gives the principle of virtual work, which needs only first derivatives of displacement.</p>
+    by parts. This gives the principle of virtual work, which needs only first derivatives of displacement [1, 2].</p>
   <p><b>Discretisation.</b> Inside each element, displacement is interpolated from nodal values, <i>u</i> = <b>N</b>&nbsp;<b>u</b><sup>e</sup>.
     Strain is &epsilon; = <b>B</b>&nbsp;<b>u</b><sup>e</sup> and stress is &sigma; = <b>D</b>&nbsp;&epsilon;. The element stiffness is
     <b>k</b><sup>e</sup> = &int; <b>B</b><sup>T</sup><b>D</b><b>B</b> t dA. All element matrices are assembled into
     <b>K</b><b>u</b> = <b>F</b> and solved after removing the clamped degrees of freedom.</p>
   <p><b>Elements.</b> CST has linear shape functions and constant strain, so its stiffness is exact in closed form.
     Q4 is isoparametric: it is mapped from a reference square with the Jacobian <b>J</b> and integrated with
-    2&times;2 Gauss points.</p>
+    2&times;2 Gauss points [1, 3].</p>
   
   <p><b>Reference solution.</b> For pressure on the top face, the line load is q = p&middot;t. Tip deflection is
     &delta; = qL&#8308;/(8EI) + qL&sup2;/(2&kappa;GA), and top-surface stress is &sigma;xx = M(x)&middot;c/I with M(x) = q(L&minus;x)&sup2;/2.
@@ -146,15 +155,28 @@
     <figure><img src="assets/convergence.png" alt="Convergence of CST and Q4"><figcaption>Q4 converges much faster than CST in bending. Linear triangles lock (spurious shear stiffness).</figcaption></figure>
     <figure><img src="assets/top_stress.png" alt="Top surface stress, FEM vs beam theory"><figcaption>FEM matches M&middot;c/I along the bar. Near the clamped corner FEM rises above theory: a stress concentration.</figcaption></figure>
   </div>
-  <h3>Limitations</h3>
+  <h2>5. Limitations</h2>
   <p>Linear elastic, small strain, 2D plane stress, structured meshes, dense solver. The clamped corners are stress
     singularities: peak von Mises stress there keeps rising as the mesh is refined, so the safety factor depends on the
     mesh and is a conservative estimate. Material presets are typical values; 3D-printed properties vary with print settings.</p>
 </section>
 
+<section id="references">
+  <h2>References</h2>
+  <ol class="refs">
+    <li>J. Fish and T. Belytschko, <i>A First Course in Finite Elements</i>. Wiley, 2007.</li>
+    <li>D. L. Logan, <i>A First Course in the Finite Element Method</i>. Cengage Learning.</li>
+    <li>R. D. Cook, D. S. Malkus, M. E. Plesha and R. J. Witt, <i>Concepts and Applications of Finite Element Analysis</i>, 4th ed. Wiley, 2002.</li>
+    <li>S. P. Timoshenko and J. N. Goodier, <i>Theory of Elasticity</i>, 3rd ed. McGraw-Hill, 1970.</li>
+  </ol>
+  <h3>How to cite</h3>
+  <pre class="cite">arbhadra (2026). FEM-2D: A verified plane-stress finite element solver for clamped bars under pressure.
+https://github.com/arbhadra/fem2d-web</pre>
+</section>
+
 </main>
 
-<footer>Built by arbhadra &middot; Python, NumPy, Matplotlib, PyScript &middot; <a href="https://github.com/arbhadra/fem2d-web">GitHub</a></footer>
+<footer>arbhadra &middot; MIT License &middot; Python, NumPy, Matplotlib, PyScript &middot; <a href="https://github.com/arbhadra/fem2d-web">GitHub</a></footer>
 
 <script type="py" src="./main.py" config="./pyscript.toml"></script>
 </body>
