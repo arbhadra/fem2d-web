@@ -87,3 +87,7 @@ https://github.com/arbhadra/fem2d-web
 
 arbhadra. B.Sc. Mechanical Engineering (2024). Code structure drafted with AI assistance; every
 derivation, test and result reproduced and checked by the author.
+
+## Updating the live site
+
+After changing any `.py` file, bump the `?v=` version in `index.html` and `pyscript.toml` (the test suite checks they match). Otherwise browsers may keep running a cached old copy for up to 10 minutes.

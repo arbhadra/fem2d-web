@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "FEM-2D: a browser-based 2D plane-stress finite element solver"
+authors:
+  - alias: arbhadra
+version: 2026.11.16
+date-released: 2026-11-16
+license: MIT
+repository-code: "https://github.com/arbhadra/fem2d-web"
+url: "https://arbhadra.github.io/fem2d-web/"
+keywords: [finite element method, plane stress, CST, Q4, verification, PyScript, Python]
