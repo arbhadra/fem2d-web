@@ -1,0 +1,12 @@
+packages = ["numpy", "matplotlib"]
+
+[files]
+"./fem/__init__.py" = "./fem/__init__.py"
+"./fem/materials.py" = "./fem/materials.py"
+"./fem/mesh.py" = "./fem/mesh.py"
+"./fem/elements.py" = "./fem/elements.py"
+"./fem/solver.py" = "./fem/solver.py"
+"./fem/post.py" = "./fem/post.py"
+"./fem/analytic.py" = "./fem/analytic.py"
+"./fem/model.py" = "./fem/model.py"
+"./fem/plotting.py" = "./fem/plotting.py"

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FEM-2D: stress and strain in a loaded bar, in your browser</title>
+  <meta name="description" content="A 2D plane-stress finite element solver (CST and Q4) written from scratch in Python, running in the browser.">
+  <link rel="stylesheet" href="https://pyscript.net/releases/2026.3.1/core.css">
+  <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="loading">Loading Python, NumPy and Matplotlib in your browser&hellip; (first visit takes 10&ndash;20 s)</div>
+
+<header>
+  <h1>FEM-2D</h1>
+  <p class="lead">A 2D plane-stress finite element solver written from scratch in Python. Pick a material,
+    apply pressure to a bar, and see its stress, strain and safety factor. Everything runs in your browser: no
+    server, no installation.</p>
+  <p class="links">
+    <a href="https://github.com/arbhadra/fem2d-web">Source code on GitHub</a> &middot;
+    <a href="#theory">Theory</a> &middot;
+    <a href="#verification">Verification</a>
+  </p>
+</header>
+
+<main>
+
+<section id="problem">
+  <h2>1. The problem</h2>
+  <p>A rectangular bar of length <i>L</i>, height <i>h</i> and thickness <i>t</i> is clamped on its left edge.
+    A uniform pressure <i>p</i> either pushes down on its top face (bending) or pulls on its right end (tension).
+    Assuming small strains, linear elasticity and plane stress, the finite element method finds the stress and strain
+    everywhere in the bar. The results are checked against beam theory, and the peak stress is compared with the
+    material's yield strength.</p>
+  <svg viewBox="0 0 760 270" role="img" aria-label="Cantilever bar clamped on the left with pressure on the top face">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#555"/></marker>
+      <marker id="arP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d9534f"/></marker></defs>
+    <rect x="60" y="80" width="30" height="120" fill="#ddd" stroke="#555"/>
+    <rect x="90" y="110" width="520" height="60" fill="#e8f0fb" stroke="#333"/>
+    <g stroke="#d9534f" stroke-width="2" marker-end="url(#arP)">
+      <line x1="120" y1="62" x2="120" y2="106"/><line x1="200" y1="62" x2="200" y2="106"/><line x1="280" y1="62" x2="280" y2="106"/>
+      <line x1="360" y1="62" x2="360" y2="106"/><line x1="440" y1="62" x2="440" y2="106"/><line x1="520" y1="62" x2="520" y2="106"/><line x1="600" y1="62" x2="600" y2="106"/>
+    </g>
+    <line x1="120" y1="62" x2="600" y2="62" stroke="#d9534f" stroke-width="2"/>
+    <text x="350" y="50" font-size="15" font-weight="600" fill="#d9534f" text-anchor="middle">pressure p</text>
+    <path d="M90 140 Q390 140 610 186" fill="none" stroke="#2a6fdb" stroke-width="2" stroke-dasharray="6 4"/>
+    <line x1="650" y1="110" x2="650" y2="170" stroke="#555" marker-start="url(#ar)" marker-end="url(#ar)"/><text x="660" y="145" font-size="14">h</text>
+    <line x1="90" y1="225" x2="610" y2="225" stroke="#555" marker-start="url(#ar)" marker-end="url(#ar)"/><text x="350" y="218" font-size="14">L</text>
+    <text x="75" y="220" font-size="12" text-anchor="middle" fill="#555">clamped</text>
+    <text x="350" y="252" font-size="12" text-anchor="middle" fill="#555">thickness t into the page &middot; dashed line: deflected axis</text>
+  </svg>
+</section>
+
+<section id="solver">
+  <h2>2. Run it</h2>
+  <div class="grid">
+    <fieldset>
+      <legend>Geometry and load</legend>
+      <label>Length L (m) <input id="L" type="number" value="1.0" step="0.1"></label>
+      <label>Height h (m) <input id="h" type="number" value="0.1" step="0.01"></label>
+      <label>Thickness t (m) <input id="t" type="number" value="0.01" step="0.001"></label>
+      <label>Pressure p (kPa) <input id="p" type="number" value="100" step="10"></label>
+      <label>Load case
+        <select id="load"><option value="bending">Pressure on top face (bending)</option><option value="tension">Pressure on end face (tension)</option></select>
+      </label>
+    </fieldset>
+    <fieldset>
+      <legend>Material</legend>
+      <label>Material
+        <select id="preset">
+          <option value="steel_a36">Structural steel (A36)</option>
+          <option value="ss304">Stainless steel 304</option>
+          <option value="al6061">Aluminium 6061-T6</option>
+          <option value="ti64">Titanium Ti-6Al-4V</option>
+          <option value="pla">PLA (3D printed)</option>
+          <option value="abs">ABS (3D printed)</option>
+          <option value="custom">Custom: enter your own</option>
+        </select>
+      </label>
+      <label>Young's modulus E (GPa) <input id="E" type="number" step="any"></label>
+      <label>Poisson's ratio &nu; <input id="nu" type="number" step="any"></label>
+      <label>Yield strength (MPa) <input id="sy" type="number" step="any"></label>
+      <p class="hint">Presets are typical handbook values. Choose Custom to type your own data.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Mesh and output</legend>
+      <label>Element type
+        <select id="element"><option value="Q4">Q4: 4-node quadrilateral</option><option value="CST">CST: 3-node triangle</option></select>
+      </label>
+      <label>Elements along L, nx <input id="nx" type="number" value="80" min="1"></label>
+      <label>Elements through h, ny <input id="ny" type="number" value="8" min="1"></label>
+      <label>Contour plot
+        <select id="field">
+          <option value="von_mises">von Mises stress</option>
+          <option value="sxx">Normal stress &sigma;xx</option>
+          <option value="txy">Shear stress &tau;xy</option>
+          <option value="exx">Strain &epsilon;xx</option>
+        </select>
+      </label>
+      <button id="solve-btn" disabled>Solve</button>
+      <p class="hint">Browser limit: 2,000 degrees of freedom (e.g. 80 &times; 10).</p>
+    </fieldset>
+  </div>
+
+  <div id="status" class="status">Starting Python&hellip;</div>
+  <div id="results"></div>
+  <img id="img-field" alt="Contour plot on the deformed shape">
+  <div class="two">
+    <img id="img-sweep" alt="Applied pressure versus maximum stress">
+    <img id="img-top" alt="Stress along the top surface, FEM versus beam theory">
+  </div>
+</section>
+
+<section id="theory">
+  <h2>3. Theory in one page</h2>
+  <p><b>Weak form.</b> Equilibrium &nabla;&middot;&sigma; = 0 is multiplied by a virtual displacement and integrated
+    by parts. This gives the principle of virtual work, which needs only first derivatives of displacement.</p>
+  <p><b>Discretisation.</b> Inside each element, displacement is interpolated from nodal values, <i>u</i> = <b>N</b>&nbsp;<b>u</b><sup>e</sup>.
+    Strain is &epsilon; = <b>B</b>&nbsp;<b>u</b><sup>e</sup> and stress is &sigma; = <b>D</b>&nbsp;&epsilon;. The element stiffness is
+    <b>k</b><sup>e</sup> = &int; <b>B</b><sup>T</sup><b>D</b><b>B</b> t dA. All element matrices are assembled into
+    <b>K</b><b>u</b> = <b>F</b> and solved after removing the clamped degrees of freedom.</p>
+  <p><b>Elements.</b> CST has linear shape functions and constant strain, so its stiffness is exact in closed form.
+    Q4 is isoparametric: it is mapped from a reference square with the Jacobian <b>J</b> and integrated with
+    2&times;2 Gauss points.</p>
+  
+  <p><b>Reference solution.</b> For pressure on the top face, the line load is q = p&middot;t. Tip deflection is
+    &delta; = qL&#8308;/(8EI) + qL&sup2;/(2&kappa;GA), and top-surface stress is &sigma;xx = M(x)&middot;c/I with M(x) = q(L&minus;x)&sup2;/2.
+    For tension: &sigma; = p, &epsilon; = p/E and &delta; = pL/E.</p>
+  <p><b>Safety factor.</b> Yield strength divided by the maximum von Mises stress. Because the problem is linear,
+    first yield happens at p &times; safety factor.</p>
+</section>
+
+<section id="verification">
+  <h2>4. Verification</h2>
+  <p>The same <code>fem/</code> package that runs on this page is tested automatically on every commit. The tests check:</p>
+  <ul>
+    <li>The D matrix matches the textbook; invalid materials are rejected.</li>
+    <li>Symmetric element matrices with exactly 3 rigid-body modes (5 for Q4 with 1-point integration: the 2 extra are hourglass modes).</li>
+    <li>The patch test passes on a distorted mesh, for both CST and Q4.</li>
+    <li>Equilibrium: the reaction forces equal the applied pressure force to machine precision.</li>
+    <li>Tension matches &epsilon; = p/E; bending converges to beam theory; results scale linearly with pressure.</li>
+  </ul>
+  <div class="two">
+    <figure><img src="assets/convergence.png" alt="Convergence of CST and Q4"><figcaption>Q4 converges much faster than CST in bending. Linear triangles lock (spurious shear stiffness).</figcaption></figure>
+    <figure><img src="assets/top_stress.png" alt="Top surface stress, FEM vs beam theory"><figcaption>FEM matches M&middot;c/I along the bar. Near the clamped corner FEM rises above theory: a stress concentration.</figcaption></figure>
+  </div>
+  <h3>Limitations</h3>
+  <p>Linear elastic, small strain, 2D plane stress, structured meshes, dense solver. The clamped corners are stress
+    singularities: peak von Mises stress there keeps rising as the mesh is refined, so the safety factor depends on the
+    mesh and is a conservative estimate. Material presets are typical values; 3D-printed properties vary with print settings.</p>
+</section>
+
+</main>
+
+<footer>Built by arbhadra &middot; Python, NumPy, Matplotlib, PyScript &middot; <a href="https://github.com/arbhadra/fem2d-web">GitHub</a></footer>
+
+<script type="py" src="./main.py" config="./pyscript.toml"></script>
+</body>
+</html>
